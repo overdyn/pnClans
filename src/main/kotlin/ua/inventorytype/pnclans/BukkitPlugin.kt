@@ -2,8 +2,6 @@ package ua.inventorytype.pnclans
 
 import org.bukkit.Bukkit
 import org.bukkit.plugin.java.JavaPlugin
-import org.bstats.bukkit.Metrics
-import org.bstats.charts.SimplePie
 import org.bukkit.plugin.ServicePriority
 import com.github.retrooper.packetevents.PacketEvents
 import com.github.retrooper.packetevents.util.TimeStampMode
@@ -28,7 +26,6 @@ import ua.inventorytype.pnclans.impl.command.ClanCommand
 import ua.inventorytype.pnclans.impl.config.ConfigMigrationSafety
 import ua.inventorytype.pnclans.impl.config.ConfigService
 import ua.inventorytype.pnclans.impl.config.ConfigValidator
-import ua.inventorytype.pnclans.impl.config.ConfigurationBackfill
 import ua.inventorytype.pnclans.impl.config.MenuConfigValidator
 import ua.inventorytype.pnclans.impl.config.PointsConfigValidator
 import ua.inventorytype.pnclans.impl.economy.EconomyService
@@ -38,17 +35,26 @@ import ua.inventorytype.pnclans.impl.placeholder.PnClansExpansion
 import ua.inventorytype.pnclans.impl.teleport.TeleportService
 import ua.inventorytype.pnclans.impl.ux.TimedBossBarService
 import ua.inventorytype.pnclans.impl.util.ChatInputPrompt
-import ua.inventorytype.pnclans.impl.util.PluginBanner
+import ua.inventorytype.pnclans.impl.integration.PnLibraryIntegration
+import ua.inventorytype.pnclans.impl.integration.PnLibraryBootstrapInstaller
 
 class BukkitPlugin : JavaPlugin() {
+    private var startupBlocked = false
 
     override fun onLoad() {
+        if (!PnLibraryBootstrapInstaller.ensureInstalled(this, PnLibraryIntegration.MINIMUM_LIBRARY_VERSION)) {
+            startupBlocked = true
+            return
+        }
         PacketEvents.setAPI(SpigotPacketEventsBuilder.build(this))
         PacketEvents.getAPI().load()
         logger.info("[pnClans] PacketEvents loaded from ${PacketEvents::class.java.protectionDomain.codeSource?.location}")
     }
 
-    private var metricsInitialized = false
+    internal lateinit var pnLibraryIntegration: PnLibraryIntegration
+        private set
+
+    internal fun hasPnLibraryIntegration(): Boolean = ::pnLibraryIntegration.isInitialized
 
     lateinit var economyService: EconomyService
         private set
@@ -117,18 +123,20 @@ class BukkitPlugin : JavaPlugin() {
         if (migrationSafety.reconcile(this, configService)) {
             configService.loadAll()
         }
-        ConfigurationBackfill.applyV121(this, configService)
-        ConfigurationBackfill.applyV122(this, configService)
-        // Backfill writes missing keys into administrator-owned YAML after the first deserialize.
-        // Reload once so those freshly materialized menu IDs are available immediately, not only
-        // after the next /reload or server restart.
-        configService.loadAll()
         ConfigValidator.validate(this, configService)
         PointsConfigValidator.validate(this, configService)
         MenuConfigValidator.validate(this, configService)
     }
 
     override fun onEnable() {
+        if (startupBlocked) {
+            server.pluginManager.disablePlugin(this)
+            return
+        }
+        if (!PnLibraryBootstrapInstaller.ensureCompatible(this, PnLibraryIntegration.MINIMUM_LIBRARY_VERSION)) {
+            server.pluginManager.disablePlugin(this)
+            return
+        }
         PacketEvents.getAPI().settings.debug(false).checkForUpdates(false).timeStampMode(TimeStampMode.MILLIS).reEncodeByDefault(true)
         PacketEvents.getAPI().init()
         logger.info("[pnClans] Enabled ${description.version} on ${server.version}; PacketEvents initialized=${PacketEvents.getAPI().isInitialized}")
@@ -138,6 +146,8 @@ class BukkitPlugin : JavaPlugin() {
 
         configService = ConfigService(this)
         reloadConfigurations()
+
+        pnLibraryIntegration = PnLibraryIntegration(this)
 
         ua.inventorytype.pnclans.impl.analytics.ErrorReporter.init(this)
 
@@ -158,7 +168,6 @@ class BukkitPlugin : JavaPlugin() {
         inviteService = ClanInviteService(clanService)
         teleportService = TeleportService(this)
         timedBossBarService = TimedBossBarService(this)
-        initializeMetrics()
 
         guiListener = GuiListener(this)
         server.pluginManager.registerEvents(guiListener, this)
@@ -179,10 +188,7 @@ class BukkitPlugin : JavaPlugin() {
             papiConnected = true
         }
 
-        ua.inventorytype.pnclans.impl.updater.AutoUpdater(this).checkForUpdatesAsync()
-
-        PluginBanner.printEnableBanner(
-            plugin = this,
+        pnLibraryIntegration.started(
             economyConnected = economyConnected,
             papiConnected = papiConnected,
             loadedClansCount = clanService.getAllClans().size,
@@ -209,19 +215,9 @@ class BukkitPlugin : JavaPlugin() {
         }
         if (PacketEvents.getAPI() != null && PacketEvents.getAPI().isInitialized) PacketEvents.getAPI().terminate()
         ua.inventorytype.pnclans.impl.analytics.ErrorReporter.shutdown()
-        PluginBanner.printDisableBanner(this, savedClansCount)
-    }
-
-    private fun initializeMetrics() {
-        if (metricsInitialized) return
-        val metrics = Metrics(this, BSTATS_PLUGIN_ID)
-        metrics.addCustomChart(SimplePie("clan_chat_mode") { configService.settings.clanChat.mode.name })
-        metrics.addCustomChart(SimplePie("storage_type") { configService.settings.storageType.uppercase() })
-        metrics.addCustomChart(SimplePie("update_channel") { configService.settings.updateChannel.name })
-        metricsInitialized = true
-    }
-
-    private companion object {
-        const val BSTATS_PLUGIN_ID = 33208
+        if (::configService.isInitialized) configService.unloadAll()
+        if (::pnLibraryIntegration.isInitialized) {
+            pnLibraryIntegration.close(savedClansCount)
+        }
     }
 }

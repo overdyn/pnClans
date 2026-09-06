@@ -8,8 +8,9 @@ import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerQuitEvent
-import org.bukkit.scheduler.BukkitTask
+import ru.privatenull.pnlibrary.api.tasks.TaskHandle
 import ua.inventorytype.pnclans.BukkitPlugin
+import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -26,7 +27,7 @@ class TimedBossBarService(private val plugin: BukkitPlugin) : Listener {
 
     private data class ActiveBar(
         val bar: BossBar,
-        val task: BukkitTask
+        val task: TaskHandle
     )
 
     private val activeBars = ConcurrentHashMap<UUID, ActiveBar>()
@@ -57,7 +58,8 @@ class TimedBossBarService(private val plugin: BukkitPlugin) : Listener {
         bar.addPlayer(player)
 
         var elapsedTicks = 0L
-        val task = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
+        val task = plugin.pnLibraryIntegration.tasks.repeatEntity(
+            player, Duration.ofMillis(50), Duration.ofMillis(50), Runnable {
             val active = activeBars[player.uniqueId]
             if (active?.bar !== bar || !player.isOnline) {
                 remove(player)
@@ -70,7 +72,7 @@ class TimedBossBarService(private val plugin: BukkitPlugin) : Listener {
             if (elapsedTicks >= durationTicks) {
                 remove(player)
             }
-        }, 1L, 1L)
+        })
 
         activeBars[player.uniqueId] = ActiveBar(bar, task)
     }
