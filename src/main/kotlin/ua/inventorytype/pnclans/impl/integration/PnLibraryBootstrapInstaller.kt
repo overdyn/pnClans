@@ -38,7 +38,7 @@ object PnLibraryBootstrapInstaller {
             showFailure(plugin, IllegalStateException("pnLibrary загружена, но не зарегистрировала API"))
             return false
         }
-        if (library.isAtLeastVersion(minimumVersion)) return true
+        if (isAtLeastVersion(library.version, minimumVersion)) return true
         showOutdated(plugin, library.version, minimumVersion)
         return false
     }
@@ -195,6 +195,42 @@ object PnLibraryBootstrapInstaller {
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
     private data class ReleaseAsset(val url: String, val sha256: String)
+    private data class Version(val major: Int, val minor: Int, val patch: Int, val pre: List<String>) : Comparable<Version> {
+        override fun compareTo(other: Version): Int {
+            compareValuesBy(this, other, Version::major, Version::minor, Version::patch).takeIf { it != 0 }?.let { return it }
+            if (pre.isEmpty()) return if (other.pre.isEmpty()) 0 else 1
+            if (other.pre.isEmpty()) return -1
+            for (index in 0 until maxOf(pre.size, other.pre.size)) {
+                val left = pre.getOrNull(index) ?: return -1
+                val right = other.pre.getOrNull(index) ?: return 1
+                val leftNumber = left.toIntOrNull()
+                val rightNumber = right.toIntOrNull()
+                val compared = when {
+                    leftNumber != null && rightNumber != null -> leftNumber.compareTo(rightNumber)
+                    leftNumber != null -> -1
+                    rightNumber != null -> 1
+                    else -> left.compareTo(right, ignoreCase = true)
+                }
+                if (compared != 0) return compared
+            }
+            return 0
+        }
+
+        companion object {
+            fun parse(raw: String): Version {
+                val value = raw.removePrefix("v").substringBefore('+')
+                val base = value.substringBefore('-').split('.')
+                return Version(
+                    base.getOrNull(0)?.toIntOrNull() ?: 0,
+                    base.getOrNull(1)?.toIntOrNull() ?: 0,
+                    base.getOrNull(2)?.toIntOrNull() ?: 0,
+                    value.substringAfter('-', "").split('.').filter(String::isNotBlank),
+                )
+            }
+        }
+    }
+    private fun isAtLeastVersion(installed: String, required: String): Boolean =
+        Version.parse(installed) >= Version.parse(required)
     private fun rawConnection(url: String) = (URI(url).toURL().openConnection() as HttpURLConnection).apply {
         connectTimeout=8_000; readTimeout=30_000; instanceFollowRedirects=true
         setRequestProperty("Accept", "application/vnd.github+json"); setRequestProperty("User-Agent", "pnClans-pnLibrary-Bootstrap")

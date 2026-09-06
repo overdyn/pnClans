@@ -4,13 +4,11 @@ import org.bukkit.Bukkit
 import ru.privatenull.pnlibrary.api.DiagnosticLevel
 import ru.privatenull.pnlibrary.api.DiagnosticConfiguration
 import ru.privatenull.pnlibrary.api.DiagnosticContainer
-import ru.privatenull.pnlibrary.api.DiagnosticRegistration
-import ru.privatenull.pnlibrary.api.PluginMetrics
 import ru.privatenull.pnlibrary.api.PnLibrary
 import ru.privatenull.pnlibrary.api.PluginUpdateRequest
 import ru.privatenull.pnlibrary.api.UpdateChannel
-import ru.privatenull.pnlibrary.api.UpdateRegistration
 import ru.privatenull.pnlibrary.api.TaskScope
+import ru.privatenull.pnlibrary.api.integration.PluginIntegration
 import ua.inventorytype.pnclans.BukkitPlugin
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Supplier
@@ -26,25 +24,23 @@ class PnLibraryIntegration(private val plugin: BukkitPlugin) : AutoCloseable {
         }
     }
     private val reportedErrors = AtomicInteger()
-    val tasks: TaskScope = library.tasks.scope(plugin)
-
     private var economyConnected = false
     private var placeholderConnected = false
     private var loadedAddons = 0
     private var closed = false
 
-    private val metrics: PluginMetrics = library.metrics.open(plugin, BSTATS_PROJECT_ID)
-        .simplePie("clan_chat_mode") { plugin.configService.settings.clanChat.mode.name }
-        .simplePie("storage_type") { plugin.configService.settings.storageType.uppercase() }
-        .simplePie("update_channel") { plugin.configService.settings.updateChannel.name }
-        .simplePie("economy_available") { economyConnected.toString() }
-        .simplePie("placeholder_api") { placeholderConnected.toString() }
-        .singleLineChart("loaded_addons") { loadedAddons }
-
-    private val diagnostics: DiagnosticRegistration = library.diagnostics.register(
-        plugin.name,
-        plugin.dataFolder.toPath(),
-        DiagnosticContainer.builder("pnclans")
+    private val integration = PluginIntegration.builder(library, plugin, "pnclans")
+        .metrics(BSTATS_PROJECT_ID) { metrics ->
+            metrics.simplePie("clan_chat_mode") { plugin.configService.settings.clanChat.mode.name }
+                .simplePie("storage_type") { plugin.configService.settings.storageType.uppercase() }
+                .simplePie("update_channel") { plugin.configService.settings.updateChannel.name }
+                .simplePie("economy_available") { economyConnected.toString() }
+                .simplePie("placeholder_api") { placeholderConnected.toString() }
+                .singleLineChart("loaded_addons") { loadedAddons }
+        }
+        .diagnostics(
+            plugin.dataFolder.toPath(),
+            DiagnosticContainer.builder("pnclans")
             .snapshot(Supplier {
                 val clans = runCatching { plugin.clanService.getAllClans() }.getOrDefault(emptyList())
                 mapOf(
@@ -74,19 +70,20 @@ class PnLibraryIntegration(private val plugin: BukkitPlugin) : AutoCloseable {
             .configuration("shop.yml")
             .configuration("quests.yml")
             .configuration("battles.yml")
-            .build(),
-    )
-
-    private val updates: UpdateRegistration = library.updates.register(
-        plugin,
-        PluginUpdateRequest.builder()
+                .build(),
+        )
+        .updates(
+            PluginUpdateRequest.builder()
             .repository("pnFolder", "pnClans")
             .channel(UpdateChannel.valueOf(plugin.configService.settings.updateChannel.name))
             .automaticDownload(plugin.configService.settings.autoUpdate)
             .artifact("(?i)^pnClans-.*-paper-.*-java21\\.jar$", 21, 24)
             .artifact("(?i)^pnClans-.*-paper-.*-java25\\.jar$", 25)
-            .build(),
-    )
+                .build(),
+        )
+        .build()
+
+    val tasks: TaskScope get() = integration.tasks
 
     fun started(
         economyConnected: Boolean,
@@ -149,10 +146,7 @@ class PnLibraryIntegration(private val plugin: BukkitPlugin) : AutoCloseable {
     fun close(savedClansCount: Int) {
         if (closed) return
         closed = true
-        diagnostics.close()
-        metrics.close()
-        updates.close()
-        tasks.close()
+        integration.close()
         library.logging.shutdownBox(plugin, "pnClans ${plugin.description.version}")
             .ok("Хранилище", "сохранено кланов: $savedClansCount")
             .ok("Диагностика", "регистрация закрыта")
@@ -172,6 +166,6 @@ class PnLibraryIntegration(private val plugin: BukkitPlugin) : AutoCloseable {
 
     companion object {
         private const val BSTATS_PROJECT_ID = 33208
-        const val MINIMUM_LIBRARY_VERSION = "2.0.0"
+        const val MINIMUM_LIBRARY_VERSION = "2.0.0-beta.2"
     }
 }
