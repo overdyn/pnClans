@@ -3,6 +3,7 @@ package ua.inventorytype.pnclans.impl.integration
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.ChatColor
 import ru.privatenull.pnlibrary.api.PnLibrary
+import ru.privatenull.pnlibrary.api.version.SemanticVersion
 import java.net.HttpURLConnection
 import java.net.URI
 import java.nio.file.Files
@@ -61,6 +62,8 @@ object PnLibraryBootstrapInstaller {
             }
         } ?: error("В релизе pnLibrary отсутствует Bukkit JAR с SHA-256")
         val url = asset.url
+        val fileName = url.substringAfterLast('/').substringBefore('?')
+        require(fileName.matches(Regex("[A-Za-z0-9._-]+\\.jar"))) { "Некорректное имя файла pnLibrary" }
         showInstallStart(plugin, asset, useStable)
         val plugins = plugin.dataFolder.parentFile.toPath()
         Files.createDirectories(plugins)
@@ -70,13 +73,13 @@ object PnLibraryBootstrapInstaller {
             require(Files.size(temp) in 1..MAX_BYTES) { "Некорректный размер pnLibrary" }
             require(sha256(temp) == asset.sha256) { "SHA-256 pnLibrary не совпадает" }
             JarFile(temp.toFile()).use { require(it.getJarEntry("plugin.yml") != null) { "Некорректный pnLibrary JAR" } }
-            val target = plugins.resolve("pnLibrary.jar")
+            val target = plugins.resolve(fileName)
             Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING)
             val loaded = plugin.server.pluginManager.loadPlugin(target.toFile())
                 ?: error("Сервер не смог загрузить pnLibrary")
             plugin.server.pluginManager.enablePlugin(loaded)
             require(loaded.isEnabled) { "pnLibrary установлена, но не включилась" }
-            showInstallSuccess(plugin, loaded.description.version, Files.size(target))
+            showInstallSuccess(plugin, loaded.description.version, fileName, Files.size(target))
         } finally { Files.deleteIfExists(temp) }
     }
 
@@ -100,7 +103,7 @@ object PnLibraryBootstrapInstaller {
         console.sendMessage("")
     }
 
-    private fun showInstallSuccess(plugin: JavaPlugin, version: String, bytes: Long) {
+    private fun showInstallSuccess(plugin: JavaPlugin, version: String, fileName: String, bytes: Long) {
         val console = plugin.server.consoleSender
         val sizeMiB = String.format(Locale.US, "%.2f МБ", bytes / 1024.0 / 1024.0)
         console.sendMessage("")
@@ -110,6 +113,7 @@ object PnLibraryBootstrapInstaller {
         console.sendMessage("${ChatColor.GREEN} > ^ <      ${ChatColor.GRAY}Общая система pnFolder подключена")
         console.sendMessage("")
         console.sendMessage("${ChatColor.DARK_GRAY}            ┌ ${ChatColor.WHITE}Версия       ${ChatColor.GREEN}$version")
+        console.sendMessage("${ChatColor.DARK_GRAY}            ├ ${ChatColor.WHITE}Файл         ${ChatColor.GRAY}$fileName")
         console.sendMessage("${ChatColor.DARK_GRAY}            ├ ${ChatColor.WHITE}Размер       ${ChatColor.GRAY}$sizeMiB")
         console.sendMessage("${ChatColor.DARK_GRAY}            ├ ${ChatColor.WHITE}Целостность  ${ChatColor.GREEN}[ OK ]")
         console.sendMessage("${ChatColor.DARK_GRAY}            └ ${ChatColor.WHITE}Состояние    ${ChatColor.GREEN}включена")
@@ -199,42 +203,8 @@ object PnLibraryBootstrapInstaller {
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
     private data class ReleaseAsset(val url: String, val sha256: String)
-    private data class Version(val major: Int, val minor: Int, val patch: Int, val pre: List<String>) : Comparable<Version> {
-        override fun compareTo(other: Version): Int {
-            compareValuesBy(this, other, Version::major, Version::minor, Version::patch).takeIf { it != 0 }?.let { return it }
-            if (pre.isEmpty()) return if (other.pre.isEmpty()) 0 else 1
-            if (other.pre.isEmpty()) return -1
-            for (index in 0 until maxOf(pre.size, other.pre.size)) {
-                val left = pre.getOrNull(index) ?: return -1
-                val right = other.pre.getOrNull(index) ?: return 1
-                val leftNumber = left.toIntOrNull()
-                val rightNumber = right.toIntOrNull()
-                val compared = when {
-                    leftNumber != null && rightNumber != null -> leftNumber.compareTo(rightNumber)
-                    leftNumber != null -> -1
-                    rightNumber != null -> 1
-                    else -> left.compareTo(right, ignoreCase = true)
-                }
-                if (compared != 0) return compared
-            }
-            return 0
-        }
-
-        companion object {
-            fun parse(raw: String): Version {
-                val value = raw.removePrefix("v").substringBefore('+')
-                val base = value.substringBefore('-').split('.')
-                return Version(
-                    base.getOrNull(0)?.toIntOrNull() ?: 0,
-                    base.getOrNull(1)?.toIntOrNull() ?: 0,
-                    base.getOrNull(2)?.toIntOrNull() ?: 0,
-                    value.substringAfter('-', "").split('.').filter(String::isNotBlank),
-                )
-            }
-        }
-    }
     private fun isAtLeastVersion(installed: String, required: String): Boolean =
-        Version.parse(installed) >= Version.parse(required)
+        SemanticVersion.tryParse(installed)?.isAtLeast(required) ?: false
     private fun rawConnection(url: String) = (URI(url).toURL().openConnection() as HttpURLConnection).apply {
         connectTimeout=8_000; readTimeout=30_000; instanceFollowRedirects=true
         setRequestProperty("Accept", "application/vnd.github+json"); setRequestProperty("User-Agent", "pnClans-pnLibrary-Bootstrap")

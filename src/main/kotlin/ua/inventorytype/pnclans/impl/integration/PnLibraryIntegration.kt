@@ -166,6 +166,6 @@ class PnLibraryIntegration(private val plugin: BukkitPlugin) : AutoCloseable {
 
     companion object {
         private const val BSTATS_PROJECT_ID = 33208
-        const val MINIMUM_LIBRARY_VERSION = "2.0.0-beta.2"
+        const val MINIMUM_LIBRARY_VERSION = "2.0.0-beta.3"
     }
 }
