@@ -385,6 +385,8 @@ class MenusConfig {
             "confirmDisband" to GuiItemConfig(slot = 11, material = "RED_DYE", name = "&#FC3737✖ Распустить клан", lore = listOf("", "&#FC3737 «Подтверждение»", " &7- &fКлан &#5EA9FD{clan} &fбудет удалён навсегда.", " &7- &fЭто действие нельзя отменить.", "", "&#FC3737➥ &fНажмите, &eЛКМ &fчтобы подтвердить")),
             "confirmLeave" to GuiItemConfig(slot = 11, material = "RED_DYE", name = "&#FC3737✖ Покинуть клан", lore = listOf("", "&#FC3737 «Подтверждение»", " &7- &fВы покинете клан &#5EA9FD{clan}&f.", " &7- &fПрава и доступы будут потеряны.", "", "&#FC3737➥ &fНажмите, &eЛКМ &fчтобы подтвердить")),
             "info" to GuiItemConfig(slot = 13, material = "ENCHANTED_BOOK", name = "&#FFD700❂ Важное решение", lore = listOf("", "&#9EFC65 «Проверьте действие»", " &7- &fПеред подтверждением убедитесь,", " &7- &fчто выбрали правильное решение.", "", "&#FC65DF «Безопасность»", " &7- &fДля возврата выберите отмену справа.")),
+            "battleWarningLeader" to GuiItemConfig(slot = 0, material = "PAPER", name = "&#FC3737Активная битва — роспуск", lore = listOf("", "&#FC3737 «Активная битва»", " &7- &fРоспуск немедленно завершит бой.", " &7- &fКлану засчитают техническое поражение", " &7- &fи снимут MMR.", "")),
+            "battleWarningMember" to GuiItemConfig(slot = 0, material = "PAPER", name = "&#FC3737Активная битва — выход", lore = listOf("", "&#FC3737 «Активная битва»", " &7- &fПосле выхода вы больше не сможете", " &7- &fучаствовать в текущей битве.", "")),
             "cancel" to GuiItemConfig(slot = 15, material = "LIME_CANDLE", name = "&#5EFD7D↶ Отменить действие", lore = listOf("", "&#9EFC65 «Безопасный возврат»", " &7- &fНичего не будет изменено.", "", "&#FF8702➥ &fНажмите, &eЛКМ &fчтобы вернуться"))
         )
     )
@@ -437,6 +439,7 @@ class MenusConfig {
         title = "&#FC7D37« Права Игрока »",
         rows = 5,
         items = mapOf(
+            "permission" to GuiItemConfig(slot = 10, material = "PAPER", name = "&#FC7D37Право: &f{permission}", lore = listOf("", "&#9EFC65 «Состояние»", " &7- &fСтатус: {state}", " &7- &fРоль: &#5EA9FD{role}", "", "&#FC65DF «Описание»", "{description}", "", "&#FF8702➥ &fНажмите, &eЛКМ &fчтобы {action}")),
             "back" to GuiItemConfig(slot = 36, material = "RED_CANDLE", name = "§x§F§F§0§0§0§0Вернуться", lore = listOf("&7Вернуться к участникам"), actions = listOf(OpenGuiAction("MEMBERS")))
         )
     )
@@ -489,10 +492,15 @@ class MenusConfig {
         title = "&#FC7D37« Хранилище Клана »",
         rows = 6,
         items = mapOf(
+            "lockedSlot" to GuiItemConfig(slot = 0, material = "RED_STAINED_GLASS_PANE", name = "&#FF3B3B🔒 СЛОТ ЗАБЛОКИРОВАН", lore = listOf("", "&#9EFC65 «Информация»", " &7- &fСтатус: &#FC3737Закрыт для хранения", " &7- &fТребуется уровень клана: &e{level} лвл.", "", "&#FC65DF «Как разблокировать?»", " &7- &fКаждый уровень клана открывает", " &7- &fдополнительно &e9 новых слотов&f!", "", "&#FF8702➥ &fНажмите &eЭволюция Клана &fдля прокачки!")),
             "stats" to GuiItemConfig(slot = 45, material = "KNOWLEDGE_BOOK", name = "&#5EFD7D⌁ Аналитика склада", lore = listOf("", "&#9EFC65 «Заполненность»", " &7- &fЗанято слотов: &e{stored} &7/ &f{slots}", " &7- &fЗагрузка: {progress} &7(&e{percent}%&7)", "", "&#FC65DF «Финансы»", " &7- &fКазна клана: &#5EFD7D{balance}⛁")),
+            "decor_46" to GuiItemConfig(slot = 46, material = "BLACK_STAINED_GLASS_PANE", name = " "),
+            "decor_47" to GuiItemConfig(slot = 47, material = "BLACK_STAINED_GLASS_PANE", name = " "),
             "back" to GuiItemConfig(slot = 48, material = "RED_CANDLE", name = "&#FC3737⏎ Вернуться в меню", lore = listOf("", "&#FC65DF «Переход»", " &7- &fСохраняет содержимое склада.", " &7- &fОткрывает главное меню клана.", "", "&#FF8702➥ &fНажмите, &eЛКМ &fчтобы вернуться"), actions = listOf(OpenGuiAction("MAIN"))),
             "core" to GuiItemConfig(slot = 49, material = "BEACON", name = "&#FC7D37✦ Ядро хранилища", lore = listOf("", "&#9EFC65 «Статус»", " &7- &fУровень клана: &e{level}", " &7- &fДоступно рядов: &b{rows} &7/ &f5", " &7- &fСохранение данных: &#5EFD7DАктивно", "", "&#FC65DF «Назначение»", " &7- &fЦентральный модуль склада.", " &7- &fПоказывает текущую вместимость."), glow = true),
             "upgrade" to GuiItemConfig(slot = 50, material = "NETHER_STAR", name = "&#FC65DF✵ Эволюция склада", lore = listOf("", "&#9EFC65 «Прокачка»", " &7- &fКаждый уровень открывает", " &7- &fновые ряды хранилища.", "", "&#FC65DF «Сейчас»", " &7- &fДоступно слотов: &e{slots}", " &7- &fУровень клана: &e{level}", "", "&#FF8702➥ &fНажмите, &eЛКМ &fчтобы улучшить"), glow = true, actions = listOf(OpenGuiAction("UPGRADE"))),
+            "decor_51" to GuiItemConfig(slot = 51, material = "BLACK_STAINED_GLASS_PANE", name = " "),
+            "decor_52" to GuiItemConfig(slot = 52, material = "BLACK_STAINED_GLASS_PANE", name = " "),
             "close" to GuiItemConfig(slot = 53, material = "RED_DYE", name = "&#FC3737✖ Закрыть склад", lore = listOf("", "&#FC3737 «Выход»", " &7- &fСодержимое будет сохранено.", " &7- &fМеню просто закроется.", "", "&#FF8702➥ &fНажмите, &eЛКМ &fчтобы закрыть"))
         )
     )

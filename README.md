@@ -62,9 +62,10 @@
 ## Установка
 
 1. Скачайте подходящий JAR со страницы [Releases](https://github.com/pnFolder/pnClans/releases): `pnClans-<version>-java21-all.jar` для Java 21 или `pnClans-<version>-java25-all.jar` для Java 25. Для сборки используйте `./gradlew.bat build -PjavaTarget=21` или `./gradlew.bat build -PjavaTarget=25`.
-2. Поместите JAR в папку `plugins/` вашего Paper-сервера.
-3. Для экономики установите Vault и совместимый экономический плагин.
-4. Перезапустите сервер. Плагин создаст `config.yml`, `menus.yml`, `messages.yml`, `quests.yml` и `battles.yml` в папке `plugins/pnClans`.
+2. Установите совместимый `pnLibrary-bukkit` в папку `plugins/`.
+3. Поместите JAR pnClans в ту же папку `plugins/`.
+4. Для экономики установите Vault и совместимый экономический плагин.
+5. Перезапустите сервер. Плагин создаст `config.yml`, `menus.yml`, `messages.yml`, `points.yml`, `shop.yml`, `quests.yml` и `battles.yml` в папке `plugins/pnClans`.
 
 <details>
 <summary><b>Требования и зависимости</b></summary>
@@ -73,11 +74,46 @@
 | --- | --- | --- |
 | Paper `1.21.11` | Целевое ядро сборки и проверки релиза | Да |
 | Java `21` или `25` | Среда запуска и версия байткода выбранного JAR | Да |
+| pnLibrary `2.0.0` | Общий runtime, MBox, bStats и зашифрованная диагностика | Да |
 | Vault + экономика | Стоимость создания клана и казна | Для экономики |
 | PlaceholderAPI | Плейсхолдеры для TAB, чатов и скорбордов | Нет |
 | PlayerPoints | Альтернативная валюта кланового магазина | Нет |
 
 </details>
+
+### Диагностика pnLibrary
+
+pnClans регистрирует в pnLibrary сведения о хранилище, количестве загруженных
+кланов и участников, подключении экономики, PlaceholderAPI, PacketEvents и
+аддонах. Ошибки из `ErrorReporter` автоматически попадают в общий отчёт без
+имён и UUID игроков. Разрешённые конфигурации очищаются от паролей, токенов,
+ключей и webhook перед шифрованием.
+
+```text
+/pndebug pnClans
+/pndebug pnClans --config
+/pndebug pnClans --full
+```
+
+Командой владеет pnLibrary; отдельная debug-команда в pnClans не регистрируется.
+
+### Автоматические обновления
+
+pnClans регистрирует репозиторий `pnFolder/pnClans`, выбранный в конфигурации
+канал и шаблон JAR в общем обновляторе pnLibrary. Текущая версия автоматически
+читается из `plugin.yml`: отдельная константа версии в исходном коде не нужна.
+На Java 25 и новее выбирается артефакт `*-java25.jar`, на Java 21–24 —
+`*-java21.jar`. Версия Java и минимальное требование выбранного файла выводятся
+в панели обновления.
+pnLibrary проверяет GitHub сразу и каждые 30 минут, сверяет `checksums.sha256`,
+проверяет `plugin.yml` внутри JAR и кладёт принятый файл в `plugins/update`.
+Установка выполняется при следующем полном перезапуске сервера.
+
+Параметр `autoUpdate: false` в `config.yml` отключает автоматическую загрузку,
+но сохраняет проверку, уведомления в консоли и администратору при входе, а также
+ручное действие `/pn update pnClans`. Общие команды: `/pn status`, `/pn updates`,
+`/pn check`, `/pn update <плагин>` и `/pn support`. Discord-ссылка хранится
+централизованно в pnLibrary.
 
 ### Поддержка версий Minecraft
 

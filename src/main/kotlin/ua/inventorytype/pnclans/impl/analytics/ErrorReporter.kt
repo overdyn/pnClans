@@ -47,6 +47,16 @@ object ErrorReporter {
             append("; error #").append(totalErrorsCount.incrementAndGet())
         }
         plugin.logger.log(Level.SEVERE, details, throwable)
+        if (plugin.hasPnLibraryIntegration()) {
+            plugin.pnLibraryIntegration.reportError(
+                context = context,
+                throwable = throwable,
+                fields = mapOf(
+                    "playerPresent" to (player != null),
+                    "extraFieldNames" to extraData.keys.sorted(),
+                ),
+            )
+        }
     }
 
     private fun getRootCause(throwable: Throwable): Throwable {

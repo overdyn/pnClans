@@ -7,8 +7,9 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.player.AsyncPlayerChatEvent
 import org.bukkit.event.player.PlayerQuitEvent
-import org.bukkit.scheduler.BukkitTask
+import ru.privatenull.pnlibrary.api.TaskHandle
 import ua.inventorytype.pnclans.BukkitPlugin
+import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -23,7 +24,7 @@ object ChatInputPrompt {
     private data class PromptSession(
         val onInput: (String) -> Unit,
         val onTimeout: () -> Unit,
-        val timeoutTask: BukkitTask
+        val timeoutTask: TaskHandle
     )
 
     private val activePrompts = ConcurrentHashMap<UUID, PromptSession>()
@@ -41,7 +42,7 @@ object ChatInputPrompt {
                 session.timeoutTask.cancel()
                 val message = event.message.trim()
 
-                Bukkit.getScheduler().runTask(plugin, Runnable {
+                plugin.pnLibraryIntegration.tasks.entity(event.player, Runnable {
                     session.onInput(message)
                 })
             }
@@ -74,11 +75,11 @@ object ChatInputPrompt {
 
         val playerId = player.uniqueId
         lateinit var session: PromptSession
-        val timeoutTask = Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+        val timeoutTask = plugin.pnLibraryIntegration.tasks.laterEntity(player, Duration.ofMillis(timeoutTicks.coerceAtLeast(1L) * 50L), Runnable {
             if (activePrompts.remove(playerId, session)) {
                 session.onTimeout()
             }
-        }, timeoutTicks.coerceAtLeast(1L))
+        })
         session = PromptSession(onInput, onTimeout, timeoutTask)
         activePrompts[playerId] = session
         player.closeInventory()

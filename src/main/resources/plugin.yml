@@ -2,10 +2,13 @@ name: pnClans
 version: '${version}'
 
 main: ua.inventorytype.pnclans.BukkitPlugin
+authors: [overdyn]
+website: https://discord.gg/TFdnyvMft
 # Bukkit accepts minor versions here, not a patch version. See README for the 1.16.5 best-effort policy.
 api-version: '1.16'
 load: POSTWORLD
 softdepend:
+  - pnLibrary
   - Vault
   - PlaceholderAPI
   - PlayerPoints

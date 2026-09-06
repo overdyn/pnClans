@@ -141,7 +141,7 @@ class Settings {
     @Transient
     val checkUpdates: Boolean = true
 
-    @Transient
+    @YamlComment("Автоматически скачивать найденные обновления. Если выключено, проверка, уведомления и ручные действия обновления продолжат работать.")
     val autoUpdate: Boolean = true
 
     @YamlComment("Стоимость создания клана в монетах экономики Vault (0 — бесплатно)")
