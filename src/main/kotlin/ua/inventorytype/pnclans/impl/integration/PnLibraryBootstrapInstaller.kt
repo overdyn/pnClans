@@ -32,10 +32,9 @@ object PnLibraryBootstrapInstaller {
     }
 
     private fun install(plugin: JavaPlugin) {
-        plugin.logger.warning("pnLibrary не найдена; устанавливаю последнюю стабильную версию…")
         val stable = readOrNull(STABLE_API)
         val json = stable ?: read(RECENT_API).also {
-            plugin.logger.warning("Стабильного релиза pnLibrary пока нет; устанавливаю последний доступный prerelease")
+            plugin.logger.warning("Стабильного релиза pnLibrary пока нет; выбран последний доступный prerelease")
         }
         val asset = assetPattern.findAll(json).map { match ->
             ReleaseAsset(
@@ -48,6 +47,7 @@ object PnLibraryBootstrapInstaller {
             }
         } ?: error("В релизе pnLibrary отсутствует Bukkit JAR с SHA-256")
         val url = asset.url
+        showInstallStart(plugin, asset, stable != null)
         val plugins = plugin.dataFolder.parentFile.toPath()
         Files.createDirectories(plugins)
         val temp = Files.createTempFile(plugins, "pnlibrary-bootstrap-", ".tmp")
@@ -62,8 +62,47 @@ object PnLibraryBootstrapInstaller {
                 ?: error("Сервер не смог загрузить pnLibrary")
             plugin.server.pluginManager.enablePlugin(loaded)
             require(loaded.isEnabled) { "pnLibrary установлена, но не включилась" }
-            plugin.logger.info("pnLibrary автоматически установлена и включена")
+            showInstallSuccess(plugin, loaded.description.version, Files.size(target))
         } finally { Files.deleteIfExists(temp) }
+    }
+
+    private fun showInstallStart(plugin: JavaPlugin, asset: ReleaseAsset, stable: Boolean) {
+        val console = plugin.server.consoleSender
+        val channel = if (stable) "STABLE • стабильный канал" else "PRERELEASE • предварительный канал"
+        console.sendMessage("")
+        console.sendMessage("${ChatColor.GOLD}          ━━━━━━━━━━━ УСТАНОВКА PNLIBRARY ━━━━━━━━━━━")
+        console.sendMessage("${ChatColor.YELLOW} /\\_/\\")
+        console.sendMessage("${ChatColor.YELLOW}( o.o )     ${ChatColor.WHITE}pnClans ${ChatColor.DARK_GRAY}› ${ChatColor.YELLOW}подготовка зависимости")
+        console.sendMessage("${ChatColor.YELLOW} > ^ <      ${ChatColor.GRAY}pnLibrary не найдена на ядре")
+        console.sendMessage("")
+        console.sendMessage("${ChatColor.DARK_GRAY}            ┌ ${ChatColor.WHITE}Источник     ${ChatColor.GRAY}GitHub Releases")
+        console.sendMessage("${ChatColor.DARK_GRAY}            ├ ${ChatColor.WHITE}Канал        ${ChatColor.YELLOW}$channel")
+        console.sendMessage("${ChatColor.DARK_GRAY}            ├ ${ChatColor.WHITE}Платформа    ${ChatColor.YELLOW}Bukkit / Paper")
+        console.sendMessage("${ChatColor.DARK_GRAY}            ├ ${ChatColor.WHITE}Файл         ${ChatColor.GRAY}${asset.url.substringAfterLast('/')}")
+        console.sendMessage("${ChatColor.DARK_GRAY}            └ ${ChatColor.WHITE}Проверка     ${ChatColor.YELLOW}SHA-256 от GitHub")
+        console.sendMessage("")
+        console.sendMessage("${ChatColor.YELLOW}          ◆ Скачиваю и проверяю библиотеку…")
+        console.sendMessage("${ChatColor.GOLD}          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        console.sendMessage("")
+    }
+
+    private fun showInstallSuccess(plugin: JavaPlugin, version: String, bytes: Long) {
+        val console = plugin.server.consoleSender
+        val sizeMiB = String.format(Locale.US, "%.2f МБ", bytes / 1024.0 / 1024.0)
+        console.sendMessage("")
+        console.sendMessage("${ChatColor.DARK_GREEN}          ━━━━━━━━━━━ PNLIBRARY ГОТОВА ━━━━━━━━━━━")
+        console.sendMessage("${ChatColor.GREEN} /\\_/\\")
+        console.sendMessage("${ChatColor.GREEN}( ^.^ )     ${ChatColor.WHITE}pnLibrary ${ChatColor.DARK_GRAY}› ${ChatColor.GREEN}установлена")
+        console.sendMessage("${ChatColor.GREEN} > ^ <      ${ChatColor.GRAY}Общая система pnFolder подключена")
+        console.sendMessage("")
+        console.sendMessage("${ChatColor.DARK_GRAY}            ┌ ${ChatColor.WHITE}Версия       ${ChatColor.GREEN}$version")
+        console.sendMessage("${ChatColor.DARK_GRAY}            ├ ${ChatColor.WHITE}Размер       ${ChatColor.GRAY}$sizeMiB")
+        console.sendMessage("${ChatColor.DARK_GRAY}            ├ ${ChatColor.WHITE}Целостность  ${ChatColor.GREEN}[ OK ]")
+        console.sendMessage("${ChatColor.DARK_GRAY}            └ ${ChatColor.WHITE}Состояние    ${ChatColor.GREEN}включена")
+        console.sendMessage("")
+        console.sendMessage("${ChatColor.GREEN}          ■ pnClans продолжает запуск")
+        console.sendMessage("${ChatColor.DARK_GREEN}          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        console.sendMessage("")
     }
 
     private fun showFailure(plugin: JavaPlugin, error: Throwable) {
