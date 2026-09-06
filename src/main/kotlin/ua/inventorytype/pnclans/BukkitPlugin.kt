@@ -39,9 +39,13 @@ import ua.inventorytype.pnclans.impl.integration.PnLibraryIntegration
 import ua.inventorytype.pnclans.impl.integration.PnLibraryBootstrapInstaller
 
 class BukkitPlugin : JavaPlugin() {
+    private var startupBlocked = false
 
     override fun onLoad() {
-        PnLibraryBootstrapInstaller.ensureInstalled(this)
+        if (!PnLibraryBootstrapInstaller.ensureInstalled(this)) {
+            startupBlocked = true
+            return
+        }
         PacketEvents.setAPI(SpigotPacketEventsBuilder.build(this))
         PacketEvents.getAPI().load()
         logger.info("[pnClans] PacketEvents loaded from ${PacketEvents::class.java.protectionDomain.codeSource?.location}")
@@ -125,6 +129,10 @@ class BukkitPlugin : JavaPlugin() {
     }
 
     override fun onEnable() {
+        if (startupBlocked) {
+            server.pluginManager.disablePlugin(this)
+            return
+        }
         PacketEvents.getAPI().settings.debug(false).checkForUpdates(false).timeStampMode(TimeStampMode.MILLIS).reEncodeByDefault(true)
         PacketEvents.getAPI().init()
         logger.info("[pnClans] Enabled ${description.version} on ${server.version}; PacketEvents initialized=${PacketEvents.getAPI().isInitialized}")

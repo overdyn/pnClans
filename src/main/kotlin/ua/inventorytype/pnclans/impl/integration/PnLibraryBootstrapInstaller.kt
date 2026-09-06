@@ -20,16 +20,14 @@ object PnLibraryBootstrapInstaller {
             "\\\"browser_download_url\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"",
     )
 
-    fun ensureInstalled(plugin: JavaPlugin) {
-        if (plugin.server.pluginManager.getPlugin("pnLibrary") != null) return
+    fun ensureInstalled(plugin: JavaPlugin): Boolean {
+        if (plugin.server.pluginManager.getPlugin("pnLibrary") != null) return true
         try {
             install(plugin)
+            return true
         } catch (error: Throwable) {
             showFailure(plugin, error)
-            throw IllegalStateException(
-                "Запуск pnClans остановлен: обязательную pnLibrary не удалось установить",
-                error,
-            )
+            return false
         }
     }
 

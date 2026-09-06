@@ -7,6 +7,7 @@ import kotlinx.serialization.KSerializer
 import ru.privatenull.pnlibrary.bukkit.config.CodeFirstYaml
 import ru.privatenull.pnlibrary.bukkit.config.ConfigCodec
 import ru.privatenull.pnlibrary.bukkit.config.ConfigGroup
+import ru.privatenull.pnlibrary.bukkit.config.ConfigValueValidator
 import ru.privatenull.pnlibrary.bukkit.config.ManagedConfig
 import org.bukkit.entity.Player
 import org.bukkit.plugin.Plugin
@@ -301,6 +302,7 @@ class ConfigService(private val plugin: Plugin) {
                 override fun decode(yaml: String): T = this@ConfigService.yaml.decodeFromString(serializer, yaml)
             },
             logger = plugin.logger,
+            validator = ConfigValueValidator { emptyList() },
         )
 }
 
