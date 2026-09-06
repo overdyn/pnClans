@@ -2,6 +2,7 @@ package ua.inventorytype.pnclans.impl.integration
 
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.ChatColor
+import ru.privatenull.pnlibrary.api.PnLibrary
 import java.net.HttpURLConnection
 import java.net.URI
 import java.nio.file.Files
@@ -29,6 +30,17 @@ object PnLibraryBootstrapInstaller {
             showFailure(plugin, error)
             return false
         }
+    }
+
+    fun ensureCompatible(plugin: JavaPlugin, minimumVersion: String): Boolean {
+        val library = plugin.server.servicesManager.load(PnLibrary::class.java)
+        if (library == null) {
+            showFailure(plugin, IllegalStateException("pnLibrary загружена, но не зарегистрировала API"))
+            return false
+        }
+        if (library.isAtLeastVersion(minimumVersion)) return true
+        showOutdated(plugin, library.version, minimumVersion)
+        return false
     }
 
     private fun install(plugin: JavaPlugin) {
@@ -121,6 +133,28 @@ object PnLibraryBootstrapInstaller {
         console.sendMessage("${ChatColor.DARK_GRAY}              ├ ${ChatColor.GRAY}Скачайте Bukkit JAR вручную:")
         console.sendMessage("${ChatColor.DARK_GRAY}              │ ${ChatColor.YELLOW}https://github.com/pnFolder/pnLibrary/releases/latest")
         console.sendMessage("${ChatColor.DARK_GRAY}              └ ${ChatColor.GRAY}Положите его в plugins и перезапустите ядро")
+        console.sendMessage("")
+        console.sendMessage("${ChatColor.RED}          ■ pnClans не был запущен")
+        console.sendMessage("${ChatColor.DARK_RED}          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        console.sendMessage("")
+    }
+
+    private fun showOutdated(plugin: JavaPlugin, installed: String, required: String) {
+        val console = plugin.server.consoleSender
+        console.sendMessage("")
+        console.sendMessage("${ChatColor.DARK_RED}          ━━━━━━━━━━━ ТРЕБУЕТСЯ ОБНОВЛЕНИЕ ━━━━━━━━━━━")
+        console.sendMessage("${ChatColor.RED} /\\_/\\")
+        console.sendMessage("${ChatColor.RED}( x.x )     ${ChatColor.WHITE}pnClans ${ChatColor.DARK_GRAY}› ${ChatColor.RED}несовместимая pnLibrary")
+        console.sendMessage("${ChatColor.RED} > ^ <      ${ChatColor.GRAY}Запуск плагина остановлен")
+        console.sendMessage("")
+        console.sendMessage("${ChatColor.DARK_GRAY}            ┌ ${ChatColor.WHITE}Установлена  ${ChatColor.RED}$installed")
+        console.sendMessage("${ChatColor.DARK_GRAY}            ├ ${ChatColor.WHITE}Требуется    ${ChatColor.YELLOW}$required или новее")
+        console.sendMessage("${ChatColor.DARK_GRAY}            └ ${ChatColor.WHITE}Состояние    ${ChatColor.RED}обновление обязательно")
+        console.sendMessage("")
+        console.sendMessage("${ChatColor.DARK_GRAY}            ◆ ${ChatColor.WHITE}Как исправить")
+        console.sendMessage("${ChatColor.DARK_GRAY}              ├ ${ChatColor.GRAY}Скачайте актуальный Bukkit JAR:")
+        console.sendMessage("${ChatColor.DARK_GRAY}              │ ${ChatColor.YELLOW}https://github.com/pnFolder/pnLibrary/releases/latest")
+        console.sendMessage("${ChatColor.DARK_GRAY}              └ ${ChatColor.GRAY}Замените pnLibrary в plugins и перезапустите ядро")
         console.sendMessage("")
         console.sendMessage("${ChatColor.RED}          ■ pnClans не был запущен")
         console.sendMessage("${ChatColor.DARK_RED}          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")

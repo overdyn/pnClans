@@ -133,6 +133,10 @@ class BukkitPlugin : JavaPlugin() {
             server.pluginManager.disablePlugin(this)
             return
         }
+        if (!PnLibraryBootstrapInstaller.ensureCompatible(this, PnLibraryIntegration.MINIMUM_LIBRARY_VERSION)) {
+            server.pluginManager.disablePlugin(this)
+            return
+        }
         PacketEvents.getAPI().settings.debug(false).checkForUpdates(false).timeStampMode(TimeStampMode.MILLIS).reEncodeByDefault(true)
         PacketEvents.getAPI().init()
         logger.info("[pnClans] Enabled ${description.version} on ${server.version}; PacketEvents initialized=${PacketEvents.getAPI().isInitialized}")

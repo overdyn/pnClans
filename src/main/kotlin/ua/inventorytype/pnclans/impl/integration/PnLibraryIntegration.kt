@@ -170,8 +170,8 @@ class PnLibraryIntegration(private val plugin: BukkitPlugin) : AutoCloseable {
         return if (normalized.isEmpty()) "PNCLANS_ERROR" else normalized
     }
 
-    private companion object {
-        const val BSTATS_PROJECT_ID = 33208
+    companion object {
+        private const val BSTATS_PROJECT_ID = 33208
         const val MINIMUM_LIBRARY_VERSION = "2.0.0"
     }
 }
