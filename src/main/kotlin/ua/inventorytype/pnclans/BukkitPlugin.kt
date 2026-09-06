@@ -42,7 +42,7 @@ class BukkitPlugin : JavaPlugin() {
     private var startupBlocked = false
 
     override fun onLoad() {
-        if (!PnLibraryBootstrapInstaller.ensureInstalled(this)) {
+        if (!PnLibraryBootstrapInstaller.ensureInstalled(this, PnLibraryIntegration.MINIMUM_LIBRARY_VERSION)) {
             startupBlocked = true
             return
         }

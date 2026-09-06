@@ -14,17 +14,17 @@ import java.util.jar.JarFile
 /** Installs the latest stable Bukkit runtime, falling back to the newest prerelease when no stable exists. */
 object PnLibraryBootstrapInstaller {
     private const val STABLE_API = "https://api.github.com/repos/pnFolder/pnLibrary/releases/latest"
-    private const val RECENT_API = "https://api.github.com/repos/pnFolder/pnLibrary/releases?per_page=1"
+    private const val TAG_API = "https://api.github.com/repos/pnFolder/pnLibrary/releases/tags/"
     private const val MAX_BYTES = 512L * 1024L * 1024L
     private val assetPattern = Regex(
         "\\\"digest\\\"\\s*:\\s*\\\"sha256:([a-fA-F0-9]{64})\\\"[^}]*" +
             "\\\"browser_download_url\\\"\\s*:\\s*\\\"([^\\\"]+)\\\"",
     )
 
-    fun ensureInstalled(plugin: JavaPlugin): Boolean {
+    fun ensureInstalled(plugin: JavaPlugin, minimumVersion: String): Boolean {
         if (plugin.server.pluginManager.getPlugin("pnLibrary") != null) return true
         try {
-            install(plugin)
+            install(plugin, minimumVersion)
             return true
         } catch (error: Throwable) {
             showFailure(plugin, error)
@@ -43,10 +43,12 @@ object PnLibraryBootstrapInstaller {
         return false
     }
 
-    private fun install(plugin: JavaPlugin) {
+    private fun install(plugin: JavaPlugin, minimumVersion: String) {
         val stable = readOrNull(STABLE_API)
-        val json = stable ?: read(RECENT_API).also {
-            plugin.logger.warning("Стабильного релиза pnLibrary пока нет; выбран последний доступный prerelease")
+        val stableVersion = stable?.let(::releaseVersion)
+        val useStable = stableVersion != null && isAtLeastVersion(stableVersion, minimumVersion)
+        val json = if (useStable) requireNotNull(stable) else read(TAG_API + "v$minimumVersion").also {
+            plugin.logger.warning("Стабильная pnLibrary не подходит; выбран совместимый релиз v$minimumVersion")
         }
         val asset = assetPattern.findAll(json).map { match ->
             ReleaseAsset(
@@ -59,7 +61,7 @@ object PnLibraryBootstrapInstaller {
             }
         } ?: error("В релизе pnLibrary отсутствует Bukkit JAR с SHA-256")
         val url = asset.url
-        showInstallStart(plugin, asset, stable != null)
+        showInstallStart(plugin, asset, useStable)
         val plugins = plugin.dataFolder.parentFile.toPath()
         Files.createDirectories(plugins)
         val temp = Files.createTempFile(plugins, "pnlibrary-bootstrap-", ".tmp")
@@ -162,6 +164,8 @@ object PnLibraryBootstrapInstaller {
     }
 
     private fun read(url: String): String = connection(url).run { inputStream.bufferedReader().use { it.readText() }.also { disconnect() } }
+    private fun releaseVersion(json: String): String? =
+        Regex("\\\"tag_name\\\"\\s*:\\s*\\\"v?([^\\\"]+)\\\"").find(json)?.groupValues?.get(1)
     private fun readOrNull(url: String): String? {
         val connection = rawConnection(url)
         return when (val code = connection.responseCode) {
