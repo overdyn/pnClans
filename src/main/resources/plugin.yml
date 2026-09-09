@@ -6,6 +6,7 @@ main: ua.inventorytype.pnclans.BukkitPlugin
 api-version: '1.16'
 load: POSTWORLD
 softdepend:
+  - pnLibrary
   - Vault
   - PlaceholderAPI
   - PlayerPoints

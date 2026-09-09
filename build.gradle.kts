@@ -35,9 +35,8 @@ dependencies {
     implementation("com.charleskorn.kaml:kaml:0.67.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.xerial:sqlite-jdbc:3.46.0.0")
-    compileOnly("ru.privatenull:pnlibrary-api:2.0.0-beta.4")
+    compileOnly("ru.privatenull:pnlibrary-api:2.0.0-beta.6")
     compileOnly("ru.privatenull:pnlibrary-core:2.0.0-beta.4") { isTransitive = false }
-    compileOnly("ru.privatenull:pnlibrary-bukkit:2.0.0-beta.4") { isTransitive = false }
 
     compileOnly("me.clip:placeholderapi:2.12.3")
     implementation("com.github.retrooper:packetevents-spigot:2.13.1-SNAPSHOT")
